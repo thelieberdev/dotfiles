@@ -50,6 +50,7 @@ log "------------- Init Dotfiles -------------"
 
 log "Install Homebrew"
 execute /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+execute eval "$(/opt/homebrew/bin/brew shellenv)"
 
 log "Setting up Mac"
 # Change network name to smth that doesn't include my name
@@ -63,25 +64,25 @@ execute sudo pkill -HUP socketfilterfw
 execute curl https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts | sudo tee -a /etc/hosts
 execute sudo dscacheutil -flushcache;sudo killall -HUP mDNSResponder
 # Expose hidden files and Library folder in Finder
-execute defaults write com.apple.finder AppleShowAllFiles -bool true
-execute chflags nohidden ~/Library
+execute sudo defaults write com.apple.finder AppleShowAllFiles -bool true
+execute sudo chflags nohidden ~/Library
 # Show all extensions
-execute defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+execute sudo defaults write NSGlobalDomain AppleShowAllExtensions -bool true
 # Don't default save to ICloud
-execute defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+execute sudo defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
 # Disable crash reporter
-execute defaults write com.apple.CrashReporter DialogType none
+execute sudo defaults write com.apple.CrashReporter DialogType none
 # Lock screen right when screensaver starts
-execute defaults write com.apple.screensaver askForPassword -int 1
-execute defaults write com.apple.screensaver askForPasswordDelay -int 0
+execute sudo defaults write com.apple.screensaver askForPassword -int 1
+execute sudo defaults write com.apple.screensaver askForPasswordDelay -int 0
 # Disable typing collection
-execute rm -rfv "~/Library/LanguageModeling/*" "~/Library/Spelling/*" "~/Library/Suggestions/*"
-execute chmod -R 000 ~/Library/LanguageModeling ~/Library/Spelling ~/Library/Suggestions
-execute chflags -R uchg ~/Library/LanguageModeling ~/Library/Spelling ~/Library/Suggestions
+execute sudo rm -rfv "~/Library/LanguageModeling/*" "~/Library/Spelling/*" "~/Library/Suggestions/*"
+execute sudo chmod -R 000 ~/Library/LanguageModeling ~/Library/Spelling ~/Library/Suggestions
+execute sudo chflags -R uchg ~/Library/LanguageModeling ~/Library/Spelling ~/Library/Suggestions
 # Disable Siri analytics database
-execute rm -rfv ~/Library/Assistant/SiriAnalytics.db
-execute chmod -R 000 ~/Library/Assistant/SiriAnalytics.db
-execute chflags -R uchg ~/Library/Assistant/SiriAnalytics.db
+execute sudo rm -rfv ~/Library/Assistant/SiriAnalytics.db
+execute sudo chmod -R 000 ~/Library/Assistant/SiriAnalytics.db
+execute sudo chflags -R uchg ~/Library/Assistant/SiriAnalytics.db
 # Brew auto update and disable analytics
 execute brew install pinentry-mac
 execute mkdir -p /Users/elias/Library/LaunchAgents
@@ -97,10 +98,11 @@ execute sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate.plist 
 execute sudo defaults write /Library/Preferences/com.apple.commerce.plist AutoUpdate -bool TRUE
 
 log "Setting up dotfiles"
-execute git submodule update --init --recursive
 execute chmod -R +x scripts
 
 log "Setting up 'dot' configs"
+execute mkdir -p $HOME/.config
+execute mkdir -p $HOME/.ssh
 copy_dir config/nvim $HOME/.config
 copy_dir config/tmux $HOME/.config
 copy_dir config/zsh $HOME/.config
@@ -112,24 +114,25 @@ copy_file config/ssh/config $HOME/.ssh/
 
 log "Setting up terminal"
 execute touch $HOME/.hushlogin
+execute rm $HOME/.zshrc
 execute ln -s ~/.config/zsh/.zshrc ~/.zshrc
 
 log "Installing programs"
 execute softwareupdate --install-rosetta --agree-to-license
 # Install zsh dependencies
-execute brew install fzf coreutils node zsh-completions
+execute brew install fzf coreutils node zsh-completions gcc
 execute chmod go-w '/opt/homebrew/share'
 execute chmod -R go-w '/opt/homebrew/share/zsh'
 # Install neovim with dependencies
-execute brew install neovim fzf fd ripgrep bat delta
+execute brew install neovim fzf fd ripgrep bat delta tree-sitter-cli
 # Install other dev stuff
 execute brew install tmux unzip ffmpeg pnpm go libpq podman
 # Install rust,cargo,... through rustup
-execute brew insatll rustup
+execute brew install rustup
 execute rustup default stable
 # Install apps I use
 execute brew install --cask font-jetbrains-mono-nerd-font ghostty
-execute brew install --cask eurkey karabiner-elements aldente betterdisplay raycast zen-browser
+execute brew install --cask eurkey karabiner-elements aldente betterdisplay raycast zen-browser tailscale-app
 execute brew install --cask obsidian font-computer-modern zotero
 # Install aerospace window manager
 execute brew install --cask nikitabobko/tap/aerospace

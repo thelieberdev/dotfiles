@@ -1,0 +1,35 @@
+start-at-login = true
+# Available commands : https://nikitabobko.github.io/AeroSpace/commands
+after-startup-command = []
+on-focus-changed = ['move-mouse window-lazy-center']
+automatically-unhide-macos-hidden-apps = true
+
+[mode.main.binding]
+cmd-ctrl-alt-space = 'layout floating tiling'
+cmd-ctrl-alt-f = 'fullscreen'
+cmd-ctrl-alt-minus = 'resize smart -100'
+cmd-ctrl-alt-equal = 'resize smart +100'
+
+cmd-ctrl-alt-h = 'focus left'
+cmd-ctrl-alt-j = 'focus down'
+cmd-ctrl-alt-k = 'focus up'
+cmd-ctrl-alt-l = 'focus right'
+cmd-ctrl-alt-shift-h = 'move left'
+cmd-ctrl-alt-shift-j = 'move down'
+cmd-ctrl-alt-shift-k = 'move up'
+cmd-ctrl-alt-shift-l = 'move right'
+
+cmd-ctrl-alt-u = 'workspace 1'
+cmd-ctrl-alt-i = 'workspace 2'
+cmd-ctrl-alt-o = 'workspace 3'
+cmd-ctrl-alt-p = 'workspace 4'
+cmd-ctrl-alt-shift-u = 'move-node-to-workspace 1'
+cmd-ctrl-alt-shift-i = 'move-node-to-workspace 2'
+cmd-ctrl-alt-shift-o = 'move-node-to-workspace 3'
+cmd-ctrl-alt-shift-p = 'move-node-to-workspace 4'
+
+[workspace-to-monitor-force-assignment]
+1 = 1
+2 = 1
+3 = 1
+4 = 2

@@ -1,0 +1,9 @@
+[user]
+  name = lieberdev
+  email = 219429329+thelieberdev@users.noreply.github.com
+[gpg]
+  format = ssh
+[init]
+	defaultBranch = main
+[pull]
+	rebase = true

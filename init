@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+
+dry_run="0"
+
+while [[ $# -gt 0 ]]; do
+  if [[ $1 == "--dry" ]]; then
+    dry_run="1"
+  fi
+  shift
+done
+
+log() {
+  if [[ $dry_run == "1" ]]; then
+    echo "[DRY_RUN]: $@"
+  else
+    echo "$@"
+  fi
+}
+
+execute() {
+  if [[ $dry_run == "1" ]]; then
+    log "execute: $@"
+    return
+  fi
+  "$@"
+}
+
+copy_dir() {
+  from=$1
+  to=$2
+  name=$(basename $from)
+
+  execute rm -rf $to/$name
+  execute cp -r $from $to/$name
+}
+
+copy_file() {
+  from=$1
+  to=$2
+  name=$(basename $from)
+
+  execute mkdir -p $to
+  execute rm -f $to/$name
+  execute cp $from $to/$name
+}
+
+sudo true # Dummy sudo command to avoid asking for password
+
+log "------------- Init Dotfiles -------------"
+
+log "Install Homebrew"
+execute /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+log "Setting up Mac"
+# Change network name to smth that doesn't include my name
+execute sudo scutil --set ComputerName MacBook
+execute sudo scutil --set LocalHostName MacBook
+# Do not respond to ICMP ping requests and connection attempts from a closed TCP or UDP port
+execute sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+execute sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on
+execute sudo pkill -HUP socketfilterfw
+# Block unwanted domains
+execute curl https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts | sudo tee -a /etc/hosts
+execute sudo dscacheutil -flushcache;sudo killall -HUP mDNSResponder
+# Expose hidden files and Library folder in Finder
+execute defaults write com.apple.finder AppleShowAllFiles -bool true
+execute chflags nohidden ~/Library
+# Show all extensions
+execute defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+# Don't default save to ICloud
+execute defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+# Disable crash reporter
+execute defaults write com.apple.CrashReporter DialogType none
+# Lock screen right when screensaver starts
+execute defaults write com.apple.screensaver askForPassword -int 1
+execute defaults write com.apple.screensaver askForPasswordDelay -int 0
+# Disable typing collection
+execute rm -rfv "~/Library/LanguageModeling/*" "~/Library/Spelling/*" "~/Library/Suggestions/*"
+execute chmod -R 000 ~/Library/LanguageModeling ~/Library/Spelling ~/Library/Suggestions
+execute chflags -R uchg ~/Library/LanguageModeling ~/Library/Spelling ~/Library/Suggestions
+# Disable Siri analytics database
+execute rm -rfv ~/Library/Assistant/SiriAnalytics.db
+execute chmod -R 000 ~/Library/Assistant/SiriAnalytics.db
+execute chflags -R uchg ~/Library/Assistant/SiriAnalytics.db
+# Brew auto update and disable analytics
+execute brew install pinentry-mac
+execute mkdir -p /Users/elias/Library/LaunchAgents
+execute brew tap domt4/autoupdate
+execute brew autoupdate start 604800 --upgrade --cleanup --immediate --sudo
+execute brew analytics off
+# Automatic system updates
+execute sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate.plist AutomaticCheckEnabled -bool TRUE
+execute sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate.plist AutomaticDownload -bool TRUE
+execute sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate.plist AutomaticallyInstallMacOSUpdates -bool TRUE
+execute sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate.plist CriticalUpdateInstall -bool TRUE
+# Automatic AppStore updates
+execute sudo defaults write /Library/Preferences/com.apple.commerce.plist AutoUpdate -bool TRUE
+
+log "Setting up dotfiles"
+execute git submodule update --init --recursive
+execute chmod -R +x scripts
+
+log "Setting up 'dot' configs"
+copy_dir config/nvim $HOME/.config
+copy_dir config/tmux $HOME/.config
+copy_dir config/zsh $HOME/.config
+copy_dir config/ghostty $HOME/.config
+copy_dir config/aerospace $HOME/.config
+copy_dir config/karabiner $HOME/.config
+copy_file config/.gitconfig $HOME/
+copy_file config/ssh/config $HOME/.ssh/
+
+log "Setting up terminal"
+execute touch $HOME/.hushlogin
+execute ln -s ~/.config/zsh/.zshrc ~/.zshrc
+
+log "Installing programs"
+execute softwareupdate --install-rosetta --agree-to-license
+# Install zsh dependencies
+execute brew install fzf coreutils node zsh-completions
+execute chmod go-w '/opt/homebrew/share'
+execute chmod -R go-w '/opt/homebrew/share/zsh'
+# Install neovim with dependencies
+execute brew install neovim fzf fd ripgrep bat delta
+# Install other dev stuff
+execute brew install tmux unzip ffmpeg pnpm go libpq podman
+# Install rust,cargo,... through rustup
+execute brew insatll rustup
+execute rustup default stable
+# Install apps I use
+execute brew install --cask font-jetbrains-mono-nerd-font ghostty
+execute brew install --cask eurkey karabiner-elements aldente betterdisplay raycast zen-browser
+execute brew install --cask obsidian font-computer-modern zotero
+# Install aerospace window manager
+execute brew install --cask nikitabobko/tap/aerospace
+execute defaults write com.apple.dock expose-group-apps -bool true && killall Dock
+execute defaults write com.apple.spaces spans-displays -bool true && killall SystemUIServer

@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+SEARCH_PATHS=(
+  ~/.config
+  ~/personal
+  ~/Desktop
+)
+FIXED_PATHS=(
+  ~/.config
+  ~/dotfiles
+)
+MAX_DEPTH=1
+
+sanity_check() {
+    if ! command -v tmux &>/dev/null; then
+        echo "tmux is not installed. Please install it first."
+        exit 1
+    fi
+
+    if ! command -v fzf &>/dev/null; then
+        echo "fzf is not installed. Please install it first."
+        exit 1
+    fi
+}
+
+switch_to() {
+    if [[ -z $TMUX ]]; then
+        tmux attach-session -t "$1"
+    else
+        tmux switch-client -t "$1"
+    fi
+}
+
+has_session() {
+    tmux list-sessions | grep -q "^$1:"
+}
+
+find_items() {
+    # First, list existing TMUX sessions
+    if [[ -n "${TMUX}" ]]; then
+        current_session=$(tmux display-message -p '#S')
+        tmux list-sessions -F "[TMUX] #{session_name}" 2>/dev/null | grep -vFx "[TMUX] $current_session"
+    else
+        tmux list-sessions -F "[TMUX] #{session_name}" 2>/dev/null
+    fi
+
+    # Next, add the fixed paths from the configuration
+    for path in "${FIXED_PATHS[@]}"; do
+      # Check if the path exists and is a directory before adding it
+      if [[ -d "$path" ]]; then
+        echo "$path"
+      fi
+    done
+
+    # Finally, find subdirectories using the configured search paths
+    for path in "${SEARCH_PATHS[@]}"; do
+        if [[ -d "$path" ]]; then
+            find "$path" -mindepth 1 -maxdepth "${MAX_DEPTH}" -path '*/.git' -prune -o -type d -print
+        fi
+    done
+
+}
+
+sanity_check
+
+if [[ $# -eq 1 ]]; then
+    selected="$1"
+else
+    selected=$(find_items | fzf)
+fi
+
+if [[ -z $selected ]]; then
+    exit 0
+fi
+
+if [[ "$selected" =~ ^\[TMUX\]\ (.+)$ ]]; then
+    selected="${BASH_REMATCH[1]}"
+fi
+
+selected_name=$(basename "$selected" | tr . _)
+# '| tr . _': Replaces any dots '.' in the basename with underscores '_'
+# (tmux session names don't like dots)
+
+tmux_running=$(pgrep tmux)
+
+# First tmux launch
+if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
+  tmux new-session -s $selected_name -c $selected
+  exit 0
+fi
+
+# Create session if not existing
+if ! has_session "$selected_name"; then
+  tmux new-session -ds $selected_name -c $selected
+fi
+
+if [[ -n "$TMUX" ]]; then
+  current_session_name=$(tmux display-message -p '#S')
+  if [[ "$current_session_name" != "$selected_name" ]]; then
+    # Get the ID of the pane where this script is running
+    active_pane_id=$(tmux display-message -p '#{pane_id}')
+    panes_to_clear=$(tmux list-panes -s -t "$current_session_name" -F '#{pane_id}')
+
+    for pane in $panes_to_clear; do
+      # Only send C-c if the pane is NOT the one running this script
+      if [[ "$pane" != "$active_pane_id" ]]; then
+        tmux send-keys -t "$pane" C-c
+      fi
+    done
+    # --- END FIX ---
+  fi
+fi
+
+switch_to "$selected_name"

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+dry_run="0"
+
+while [[ $# -gt 0 ]]; do
+  if [[ $1 == "--dry" ]]; then
+    dry_run="1"
+  fi
+  shift
+done
+
+log() {
+  if [[ $dry_run == "1" ]]; then
+    echo "[DRY_RUN]: $@"
+  else
+    echo "$@"
+  fi
+}
+
+execute() {
+  if [[ $dry_run == "1" ]]; then
+    log "execute: $@"
+    return
+  fi
+  "$@"
+}
+
+copy_dir() {
+  from=$1
+  to=$2
+  name=$(basename $from)
+
+  execute rm -rf $to/$name
+  execute cp -r $from $to/$name
+}
+
+copy_file() {
+  from=$1
+  to=$2
+  name=$(basename $from)
+
+  execute mkdir -p $to
+  execute rm -f $to/$name
+  execute cp $from $to/$name
+}
+
+copy_dir $HOME/.config/nvim $HOME/dotfiles/config
+copy_dir $HOME/.config/ghostty $HOME/dotfiles/config
+copy_dir $HOME/.config/tmux $HOME/dotfiles/config
+copy_dir $HOME/.config/aerospace $HOME/dotfiles/config
+copy_dir $HOME/.config/karabiner $HOME/dotfiles/config
+rm -rf $HOME/dotfiles/config/karabiner/automatic_backups
+copy_file $HOME/.config/zsh/.zshrc $HOME/dotfiles/config/zsh
+copy_file $HOME/.gitconfig $HOME/dotfiles/config
+copy_file $HOME/.ssh/config $HOME/dotfiles/config/ssh
